@@ -8,7 +8,6 @@ Encodes and decodes text messages within images using the LSB technique. Support
 
 # Dependencies
 stb_image library: For loading and saving images.
-
 libpng library: For creating PNG images.
 
 # How It Works
