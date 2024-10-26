@@ -16,7 +16,7 @@ void printArray(unsigned char ***imageArray, int height, int width, int channels
 void free3DDynamicArray(unsigned char ***imageArray, int height, int width, int channels);
 void reverseArray(int *array, int length);
 void swap(int *x, int *y);
-int *convertCharToBinary(char character);
+int *convertCharToBinary(unsigned char character, int length);
 int *convertStringToBinary(char *string);
 unsigned char *updated1DPixelData(unsigned char ***imageArray, int height, int width, int channels);
 void createPng(char *fileName, unsigned char *pixels, int height, int width);
@@ -35,6 +35,11 @@ int main(int argc, char *argv[]) {
             Step 1: Run make
             Step 2: ./stegano -d {output picture file path} {text file to write to}
     */
+
+    if (argc != 4) {
+        printf("Not enough arguements\n");
+	return 1;
+    }
 
     char *option = argv[1];
     char *pictureFileName = argv[2];
@@ -190,7 +195,7 @@ void swap(int *x, int *y) {
     *y = temp;
 }
 
-int *convertCharToBinary(char character) {
+int *convertCharToBinary(unsigned char character, int length) {
     /*
     Summary:
         Converts a given character to its 7-bit binary representation (ASCII). The function dynamically allocates an array
@@ -205,7 +210,7 @@ int *convertCharToBinary(char character) {
         The caller is responsible for freeing the allocated memory after use.
     */
 
-    int *binaryArray = (int *)malloc(7 * sizeof(int));
+    int *binaryArray = (int *)malloc(length * sizeof(int));
     
     if (!binaryArray) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -221,11 +226,11 @@ int *convertCharToBinary(char character) {
         index++;
     }
 
-    while (index < 7) {
+    while (index < length) {
         binaryArray[index++] = 0;
     }
 
-    reverseArray(binaryArray, 7);
+    reverseArray(binaryArray, length);
 
     return binaryArray;
 }
@@ -278,7 +283,7 @@ int *convertStringToBinary(char *string) {
     }
 
     for (int character = 0; character < strlen(string); character++) {
-        totalBinaryArray[character] = convertCharToBinary(string[character]);
+        totalBinaryArray[character] = convertCharToBinary((unsigned char)string[character], 7);
     }
 
     int *oneDimBinaryArray = (int *)malloc(((strlen(string) * 7) + 7) * sizeof(int));
@@ -491,7 +496,9 @@ void encode(char *fileName, char *sentence, char *outputFileName) {
 
     for (int index = (strlen(sentence) * 7) + 7; index < ((strlen(sentence) * 7) + 7 + 7); index++) binaryArray[index] = 0;
 
-    for (int index = 0; index < ((strlen(sentence) * 7) + 7 + 7); index++) updatedPixels[index] = (unsigned char)binaryArray[index];
+    // This line needs work, because this just changes the pixel to either a 0 or 1, and that annoying,
+    // the potential fix is to convert the pixel to its binary value 
+    for (int index = 0; index < ((strlen(sentence) * 7) + 7 + 7); index++) updatedPixels[index] = updatedPixels[index] + (unsigned char)binaryArray[index];
 
     createPng(outputFileName, updatedPixels, height, width);
 
@@ -546,7 +553,8 @@ void decode(char *outputPictureFileName, char *outputTextFileName) {
         int bits[7] = {0};
 
         for (int index = 0; index < 7; index++) {
-            bits[index] = encodedImageArray[imageIndex] % 2;
+            bits[index] = encodedImageArray[imageIndex] % 2; // Gets the LSB of every pixel
+                
             imageIndex++;
         }
 
@@ -554,7 +562,7 @@ void decode(char *outputPictureFileName, char *outputTextFileName) {
 
         for (int i = 0; i < 7; i++) charCode += binaryPlaces[i] * bits[i];
 
-        if (charCode == 0) stillRunning = false;
+        if (charCode == 0) stillRunning = false; // Null terminator check
         else outputSentence[charIndex++] = (char)(charCode);
     }
 
